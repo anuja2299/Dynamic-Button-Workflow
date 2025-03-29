@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dynamic Button Workflow</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; }
+    .page { display: none; }
+    .active { display: block; }
+    .action { background: #f0f0f0; padding: 10px; margin: 5px 0; border-radius: 4px; }
+    button { margin: 5px; padding: 8px 12px; cursor: pointer; }
+    #outputText { margin-top: 10px; }
+    #buttonPreview { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; }
+    #imageContainer img { max-width: 200px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <!-- Config Page -->
+  <div id="configPage" class="page active">
+    <h1>Config Page</h1>
+    
+    <div>
+      <label>Button Label:</label>
+      <input type="text" id="buttonLabel" value="Click Me!">
+    </div>
+    
+    <h3>Add Action:</h3>
+    <select id="actionType">
+      <option value="alert">Alert</option>
+      <option value="promptAndShow">Prompt and Show</option>
+      <option value="increaseButtonSize">Increase Button Size</option>
+      <option value="setLocalStorage">Set LocalStorage</option>
+      <option value="showImage">Show Image</option>
+      <option value="disableButton">Disable Button</option>
+    </select>
+    <input type="text" id="actionParam" placeholder="Parameter (e.g., message)">
+    <button onclick="addAction()">Add Action</button>
+    
+    <h3>Workflow Actions:</h3>
+    <div id="actionList"></div>
+    
+    <button onclick="saveConfig()">Save & Go to Output</button>
+  </div>
+
+  <!-- Output Page -->
+  <div id="outputPage" class="page">
+    <h1>Output Page</h1>
+    <button id="buttonPreview">Click Me!</button>
+    <div id="outputText"></div>
+    <div id="imageContainer"></div>
+    <button onclick="goToConfig()">Edit Config</button>
+  </div>
+
+  <script>
+    let workflow = {
+      buttonLabel: "Click Me!",
+      actions: []
+    };
+
+    // Load saved config
+    if (localStorage.getItem("buttonWorkflow")) {
+      workflow = JSON.parse(localStorage.getItem("buttonWorkflow"));
+    }
+
+    // Initialize UI
+    document.getElementById("buttonLabel").value = workflow.buttonLabel;
+    renderActionList();
+
+    // Switch between pages
+    function showPage(pageId) {
+      document.querySelectorAll(".page").forEach(page => {
+        page.classList.remove("active");
+      });
+      document.getElementById(pageId).classList.add("active");
+    }
+
+    // Config Page Functions
+    function addAction() {
+      const type = document.getElementById("actionType").value;
+      const param = document.getElementById("actionParam").value;
+      workflow.actions.push({ type, param });
+      renderActionList();
+      document.getElementById("actionParam").value = "";
+    }
+
+    function renderActionList() {
+      const list = document.getElementById("actionList");
+      list.innerHTML = "";
+      workflow.actions.forEach((action, index) => {
+        const div = document.createElement("div");
+        div.className = "action";
+        div.innerHTML = `
+          ${action.type}: ${action.param || ""}
+          <button onclick="removeAction(${index})">Remove</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function removeAction(index) {
+      workflow.actions.splice(index, 1);
+      renderActionList();
+    }
+
+    function saveConfig() {
+      workflow.buttonLabel = document.getElementById("buttonLabel").value;
+      localStorage.setItem("buttonWorkflow", JSON.stringify(workflow));
+      showPage("outputPage");
+      initOutputPage();
+    }
+
+    // Output Page Functions
+    function initOutputPage() {
+      const button = document.getElementById("buttonPreview");
+      button.textContent = workflow.buttonLabel;
+      button.onclick = executeWorkflow;
+      button.disabled = false;
+      button.style.padding = "10px 20px";
+      button.style.fontSize = "16px";
+      document.getElementById("outputText").textContent = "";
+      document.getElementById("imageContainer").innerHTML = "";
+    }
+
+    function executeWorkflow() {
+      const button = document.getElementById("buttonPreview");
+      const outputText = document.getElementById("outputText");
+      const imageContainer = document.getElementById("imageContainer");
+      
+      for (const action of workflow.actions) {
+        switch (action.type) {
+          case "alert":
+            alert(action.param || "Welcome!");
+            break;
+          case "promptAndShow":
+            const name = prompt(action.param || "Enter your name");
+            if (name !== null) {
+              outputText.textContent = `Hello, ${name}`;
+            }
+            break;
+          case "increaseButtonSize":
+            const currentPadding = parseInt(button.style.padding || "10px");
+            const currentFontSize = parseInt(button.style.fontSize || "16px");
+            button.style.padding = `${currentPadding + 2}px ${currentPadding + 5}px`;
+            button.style.fontSize = `${currentFontSize + 2}px`;
+            break;
+          case "setLocalStorage":
+            const storedName = outputText.textContent.replace("Hello, ", "");
+            if (storedName) {
+              localStorage.setItem("user", storedName);
+            }
+            break;
+          case "showImage":
+            imageContainer.innerHTML = `<img src="${action.param || 'https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Cat_August_2010-4.jpg/1200px-Cat_August_2010-4.jpg'}" alt="Dynamic Image">`;
+            break;
+          case "disableButton":
+            button.disabled = true;
+            break;
+        }
+      }
+    }
+
+    function goToConfig() {
+      showPage("configPage");
+    }
+
+    // Initialize
+    initOutputPage();
+  </script>
+</body>
+</html>
